@@ -141,10 +141,9 @@ s.sendmail("sender_email_id", "receiver_email_id", message)
 # terminating the session 
 s.quit() 
 """
-"""
+
 #program code to sendmail on localhost server
 server = smtplib.SMTP('127.0.0.1')
 server.set_debuglevel(1)
 server.sendmail(fromaddr, toaddrs, message)
 server.quit()
-"""
