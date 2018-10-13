@@ -18,6 +18,7 @@ from bs4 import BeautifulSoup
 from requests import get
 import time
 import smtplib
+import datetime
 mydb = mysql.connector.connect(
   host="localhost",
   user="root",
@@ -26,8 +27,7 @@ mydb = mysql.connector.connect(
 )
 
 mycursor = mydb.cursor()
-
-#mycursor.execute("CREATE TABLE INFO (id INT AUTO_INCREMENT PRIMARY KEY, Email VARCHAR(255), TVSeries VARCHAR(255))")
+mycursor.execute("CREATE TABLE INFO (id INT AUTO_INCREMENT PRIMARY KEY, Email VARCHAR(255), TVSeries VARCHAR(255))")
 E=input("Email:") #taking the Email address
 S=list(map(str, input("TV Series:").split(','))) #Taking the list of TV series
 sql = "INSERT INTO INFO (Email, TVSeries) VALUES (%s, %s)"
@@ -47,8 +47,8 @@ for x in myresult:
     s=""
     for i in range(len(x)):
         s=s+"+"+x[i]
-    s=s+"+Tv+Series+imdb"
-    url1="https://in.search.yahoo.com/search?p="+"+"+s    
+    s=s+"+Tv+Series+imdb"   #search query
+    url1="https://in.search.yahoo.com/search?p="+"+"+s   #search query in the format of yahoo search 
     
     
     response1=get(url1)    #Searching on Yahoo the Tv Series Query
@@ -70,58 +70,95 @@ for x in myresult:
     link=search_containers.find('a',href=True) #finding the first link in search Container
     url3=url3+link['href']  #url3 is the link to the page which contains information about episodes and seasons
     
+    k=0
+    first_series=""
     response=get(url3)
     html_soup = BeautifulSoup(response.text, 'lxml')
-    
-    movie_containers = html_soup.find_all('div', class_ = 'list_item odd')
-    first_series=movie_containers[0]
-    first_year = first_series.find('div', class_ = 'airdate')
-    date=str(first_year.text)
-    
-    
-    #checking for the next episode
-    inner_text=html_soup.find('h3',id= "nextEpisode")
-    #print(inner_text)
-    #inner_date = inner_text.find('h3',id="nextEpisode")
-    if(inner_text):
-        ndate=inner_text.span.text
-        next_date=str(ndate)
-        next_date=next_date[6:len(next_date)-1]
-        if(len(next_date)!=0):
-            date=next_date
-            
-    
+    #print(url3)
+    odd_movie_containers = html_soup.find_all('div', class_ = 'list_item odd')
+    even_movie_containers = html_soup.find_all('div', class_ = 'list_item even')
+    #print("Length of odd_movie_containers=",len(odd_movie_containers))
+    #print("Length of even_movie_containers=",len(even_movie_containers))
+    index_odd=0    #to iterate through odd_movie_containers
+    index_even=0   #to iterate through even_movie_containers
+    index=0
     #creating a dictionary for the months
-    dic={"Jan.":"01","Feb.":"02","Mar.":"03","Apr.":"04","May.":"05","Jun.":"06","Jul.":"07","Aug.":"08","Sep.":"09","Oct.":"10","Nov.":"11","Dec.":"12"}
-    
-    date=date.strip()
-    if(len(date)>12):
-        date=date[-12:]
-    actual_date=date
-    if(len(date)==4):           #i.e only year is available
-        date="01/01/"+date   #to compare it with other date
-    if(len(date)==11):          #i.e dd component of date has only one element
-        date="0"+date        #to compare it with other date
-    if(len(date)==12):
-        s=date[3:7]   #to identify the alphabetical month name numerical value in its corresponding dictionary table
-        date1=date[0]+date[1]+"/"+dic[s]+"/"+date[8:]
-        date=date1
+    dic={"Jan.":"01","Feb.":"02","Mar.":"03","Apr.":"04","May.":"05","May":"05","Jun.":"06","Jul.":"07","Aug.":"08","Sep.":"09","Oct.":"10","Nov.":"11","Dec.":"12"}
     name=str(x)
     name=name[2:len(name)-3]
     message=message+"TV Series : "+name+"\n"  #storing TV series Name
-    new_date = time.strptime(date, "%d/%m/%Y")
-    present_date=str(time.strftime("%d/%m/%Y"))  #present date in dd/mm/yyyy format
-    present_date=time.strptime(present_date,"%d/%m/%Y")
-    if(present_date>new_date):
-        message=message+"Status: All the seasons are finished and no further details are available"+"\n\n"  # storing the status of the series
-    elif(new_date>=present_date):
-        if(len(actual_date)==4):
-            message=message+"Status: The next season begins in "+str(actual_date)+"\n\n\n"
+    
+    #Creating a while loop to chck the episode as they are arranged in the ascending order
+    #The loop will stop when it finds the next air date
+    
+    
+    while(index<len(odd_movie_containers)+len(even_movie_containers)):
+        date=""
+        if((index+1)%2!=0 & index_odd<len(odd_movie_containers)):
+            first_series=odd_movie_containers[index_odd]
+            first_year = first_series.find('div', class_ = 'airdate')
+            date=str(first_year.text)
+            index_odd=index_odd+1
+        elif((index+1)%2==0 & index_even<len(even_movie_containers)):
+            first_series=even_movie_containers[index_even]
+            first_year = first_series.find('div', class_ = 'airdate')
+            date=str(first_year.text)
+            index_even=index_even+1
+        date=date.strip()
+        #print("index no=",index,x,"Date=",date)
+        #message=message+"TV Series : "+name+"\n"  #storing TV series Name
+        if(len(date)==0):
+            message=message+"Status: All the seasons are finished and no further details are available"+"\n\n"
+            break
         else:
-            message=message+"Status: Next episode airs on "+date[8:]+"-"+date[3:5]+"-"+date[0:2]+"\n\n"
+            if(len(date)>12):
+                date=date[-12:]
+            actual_date=date
+            if(len(date)==12):
+                s=date[3:7]   #to identify the alphabetical month name numerical value in its corresponding dictionary table
+                date1=date[0]+date[1]+"/"+dic[s]+"/"+date[8:]
+                date=date1
+            elif(len(date)==11):          #i.e dd component of date has only one element
+                s=date[3:6]
+                if(s=="May"):
+                    date=date[0]+date[1]+"/"+dic[s]+"/"+date[7:]
+                else:
+                    date="0"+date      # to compare it with other date
+                    s=date[3:7]
+                    date=date[0]+date[1]+"/"+dic[s]+"/"+date[8:]
+            elif(len(date)==10):
+                s=date[2:5]
+                date="0"+date[0]+"/"+dic[s]+"/"+date[6:]
+            elif(len(date)==4):           #i.e only year is available
+                date="01/01/"+date      #to compare it with other date
+            
+            new_date = time.strptime(date, "%d/%m/%Y")
+            present_date=str(time.strftime("%d/%m/%Y"))  #present date in dd/mm/yyyy format
+            present_date=time.strptime(present_date,"%d/%m/%Y")
+            ##if(present_date>new_date):
+                #message=message+"Status: All the seasons are finished and no further details are available"+"\n\n"  # storing the status of the series
+            if(new_date>=present_date):
+                if(len(actual_date)==4):
+                    message=message+"Status: The next season begins in "+str(actual_date)+"\n\n\n"
+                    break
+                else:
+                    message=message+"Status: Next episode airs on 20"+date[8:]+"-"+date[3:5]+"-"+date[0:2]+"\n\n"
+                    break
+        index=index+1             #loop counter
+        
+    if(index==len(odd_movie_containers)+len(even_movie_containers)):   #if there is no date such available air date for the series
+        message=message+"Status: All the seasons are finished and no further details are available"+"\n\n"
+            
+                
+            
     
 #Now Code for sending an email to the user regarding their TV Series episode status
 #Content to be send to the respective user is stored in message variable
+
+present_date=str(time.strftime("%d/%m/%Y"))  #present date in dd/mm/yyyy format
+present_date=time.strptime(present_date,"%d/%m/%Y")
+            
+print("\nStatus as checked on date:",datetime.datetime.today().strftime('%Y-%m-%d'),"\n\n")
 print(message) #Shows the content of the message
 #s = smtplib.SMTP('localhost')
 #s.sendmail("kunalpandey@xyz.com", E , message)
@@ -141,9 +178,15 @@ s.sendmail("sender_email_id", "receiver_email_id", message)
 # terminating the session 
 s.quit() 
 """
-
 #program code to sendmail on localhost server
-server = smtplib.SMTP('127.0.0.1')
-server.set_debuglevel(1)
-server.sendmail(fromaddr, toaddrs, message)
-server.quit()
+sender = 'from@fromdomain.com'
+receivers = ['to@todomain.com']
+
+try:
+   smtpObj = smtplib.SMTP('localhost')
+   smtpObj.sendmail(sender, receivers, message)         
+   print("Successfully sent email")
+except SMTPException:
+   print("Error: unable to send email")
+    
+    
