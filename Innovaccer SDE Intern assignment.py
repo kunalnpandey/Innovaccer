@@ -46,7 +46,7 @@ message=""  #to store the status and name of the series which is to be send thro
 for x in myresult:
     s=""
     for i in range(len(x)):
-        s=s+"+"+x[i]
+        s=s+""+x[i]
     s=s+"+Tv+Series+imdb"   #search query
     url1="https://in.search.yahoo.com/search?p="+"+"+s   #search query in the format of yahoo search 
     
