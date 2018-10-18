@@ -155,14 +155,12 @@ for x in myresult:
 #Now Code for sending an email to the user regarding their TV Series episode status
 #Content to be send to the respective user is stored in message variable
 
-present_date=str(time.strftime("%d/%m/%Y"))  #present date in dd/mm/yyyy format
+present_date=str(time.strftime("%d/%m/%Y"))     #present date in dd/mm/yyyy format
 present_date=time.strptime(present_date,"%d/%m/%Y")
             
 print("\nStatus as checked on date:",datetime.datetime.today().strftime('%Y-%m-%d'),"\n\n")
-print(message) #Shows the content of the message
-#s = smtplib.SMTP('localhost')
-#s.sendmail("kunalpandey@xyz.com", E , message)
-#s.quit()
+print(message)            #Shows the content of the message
+
 """
 #Program code to send the message through Gmail
 #creates SMTP session
@@ -179,14 +177,14 @@ s.sendmail("sender_email_id", "receiver_email_id", message)
 s.quit() 
 """
 #program code to sendmail on localhost server
-sender = 'from@fromdomain.com'
-receivers = ['to@todomain.com']
+sender = 'host@fromdomain.com'
+receivers = [E]
 
 try:
-   smtpObj = smtplib.SMTP('localhost')
-   smtpObj.sendmail(sender, receivers, message)         
-   print("Successfully sent email")
-except SMTPException:
-   print("Error: unable to send email")
+    smtpObj = smtplib.SMTP('localhost')
+    smtpObj.sendmail(sender, receivers, message)         
+    print("Email Sent Successfully..!!!")
+except ConnectionRefusedError:
+    print("Error: Unable to send email\n")
     
     
